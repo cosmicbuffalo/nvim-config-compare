@@ -1,0 +1,221 @@
+#!/usr/bin/env lua
+local json = require("dkjson")
+
+local function dump_config(nvim_appname, output_file)
+  local cmd = string.format(
+    "NVIM_APPNAME='%s' nvim --headless +'lua require(\"nvim_config_dump\").dump(\"%s\")' +qall!",
+    nvim_appname,
+    output_file
+  )
+  local handle = io.popen(cmd)
+  local output = handle:read("*a")
+  handle:close()
+  return output
+end
+
+local function write_file(path, content)
+  local f = io.open(path, "w")
+  assert(f, "Cannot open " .. path .. " for writing.")
+  f:write(content)
+  f:close()
+end
+
+local function parse_args(args)
+  local config1, config2, output
+  local i = 1
+  while i <= #args do
+    if args[i] == "-o" or args[i] == "--output" then
+      output = args[i + 1]
+      i = i + 2
+    elseif not config1 then
+      config1 = args[i]
+      i = i + 1
+    elseif not config2 then
+      config2 = args[i]
+      i = i + 1
+    else
+      i = i + 1
+    end
+  end
+  return config1, config2, output
+end
+
+local function read_json(path)
+  local f = assert(io.open(path, "r"))
+  local content = f:read("*a")
+  f:close()
+  return json.decode(content)
+end
+
+local function deepcopy(orig)
+  local orig_type = type(orig)
+  local copy
+  if orig_type == 'table' then
+    copy = {}
+    for orig_key, orig_value in next, orig, nil do
+      copy[deepcopy(orig_key)] = deepcopy(orig_value)
+    end
+    setmetatable(copy, deepcopy(getmetatable(orig)))
+  else -- number, string, boolean, etc
+    copy = orig
+  end
+  return copy
+end
+
+local function write_json(path, tbl)
+  local f = assert(io.open(path, "w"))
+  f:write(json.encode(tbl, { indent = true }))
+  f:close()
+end
+
+local function plugin_diff_jsondiff(cfg1, cfg2, plugin_name)
+  local plg1 = deepcopy(cfg1.plugins[plugin_name] or {})
+  local plg2 = deepcopy(cfg2.plugins[plugin_name] or {})
+  plg1.dir = nil
+  plg2.dir = nil
+  plg1._.frags = nil
+  plg2._.frags = nil
+  plg1._.loaded = nil
+  plg2._.loaded = nil
+  plg1._.handlers = nil
+  plg2._.handlers = nil
+  plg1._.pkg = nil
+  plg2._.pkg = nil
+
+
+  local tmp1 = os.tmpname() .. "_plg1.json"
+  local tmp2 = os.tmpname() .. "_plg2.json"
+  write_json(tmp1, plg1)
+  write_json(tmp2, plg2)
+
+  local diff_cmd = string.format("json-diff -C -s %s %s", tmp1, tmp2)
+  local handle = io.popen(diff_cmd)
+  local diff = handle:read("*a")
+  handle:close()
+
+  os.remove(tmp1)
+  os.remove(tmp2)
+  return diff
+end
+
+local function set_keys(tbl)
+  local out = {}
+  for k, _ in pairs(tbl) do out[k] = true end
+  return out
+end
+
+local function list_diff(set1, set2)
+  local only1, only2, both = {}, {}, {}
+  for k in pairs(set1) do
+    if set2[k] then
+      table.insert(both, k)
+    else
+      table.insert(only1, k)
+    end
+  end
+  for k in pairs(set2) do
+    if not set1[k] then table.insert(only2, k) end
+  end
+  table.sort(only1)
+  table.sort(only2)
+  table.sort(both)
+  return only1, only2, both
+end
+
+local function keymap_sets(keymaps)
+  local set = {}
+  for _, km in ipairs(keymaps or {}) do
+    local id = km.lhs or km[1] or json.encode(km)
+    set[id] = true
+  end
+  return set
+end
+
+local RED   = "\27[31m"
+local GREEN = "\27[32m"
+local RESET = "\27[0m"
+
+local function main()
+  local config1, config2, output_dir = parse_args(arg)
+
+  if not config1 then
+    print("Usage: nvim-config-dump <config_dir1> [<config_dir2>] [-o <output_dir>]")
+    os.exit(1)
+  end
+
+  if not output_dir then
+    output_dir = "output"
+  end
+
+  os.execute("mkdir -p " .. output_dir)
+  local out1 = output_dir .. "/" .. config1 .. ".json"
+  local dump1 = dump_config(config1, out1)
+
+
+  if not config2 then
+    os.exit(0)
+  end
+
+  local out2 = output_dir .. "/" .. config2 .. ".json"
+  local dump2 = dump_config(config2, out2)
+  -- Use system diff
+  local diff_path = output_dir .. "/diff.txt"
+  local diff_cmd = string.format("json-diff %s %s > %s", out1, out2, diff_path)
+  os.execute(diff_cmd)
+  print("Dumped config to " .. out1)
+  print("Dumped config to " .. out2)
+  print("Diff saved to " .. diff_path)
+
+  print("====================================================================")
+  local cfg1, cfg2 = read_json(out1), read_json(out2)
+  local plugins1, plugins2 = cfg1.plugins or {}, cfg2.plugins or {}
+  local set1, set2 = set_keys(plugins1), set_keys(plugins2)
+  local only1, only2, both = list_diff(set1, set2)
+
+  print(string.format("Plugins present in %s but not %s:", config1, config2))
+  for _, name in ipairs(only1) do print("  " .. name) end
+  print()
+
+  print(string.format("Plugins present in %s but not %s:", config2, config1))
+  for _, name in ipairs(only2) do print("  " .. name) end
+  print()
+
+  local plugins_with_diffs = {}
+  local plugins_with_no_diffs = {}
+  for _, name in ipairs(both) do
+    local diff = plugin_diff_jsondiff(cfg1, cfg2, name)
+    if diff ~= "" then
+      plugins_with_diffs[name] = diff
+    else
+      plugins_with_no_diffs[name] = true
+    end
+  end
+
+  print("Plugins present in both with differences in configuration (excluding dir value):")
+  for plugin, diff in pairs(plugins_with_diffs) do
+    print(plugin .. " " .. RED .. "in " .. config1 .. RESET .. "  " .. GREEN .. "in " .. config2 .. RESET)
+    print(diff)
+    print()
+  end
+  print("Plugins present in both with no differences in configuration:")
+  for plugin, _ in pairs(plugins_with_no_diffs) do
+    print("  " .. plugin)
+  end
+  print()
+
+  local kmset1 = keymap_sets(cfg1.keymaps)
+  local kmset2 = keymap_sets(cfg2.keymaps)
+  local km_only1, km_only2 = {}, {}
+  for k in pairs(kmset1) do if not kmset2[k] then table.insert(km_only1, k) end end
+  for k in pairs(kmset2) do if not kmset1[k] then table.insert(km_only2, k) end end
+
+  print(string.format("Keymaps present in %s but not %s:", config1, config2))
+  for _, k in ipairs(km_only1) do print(k) end
+  print()
+
+  print(string.format("Keymaps present in %s but not %s:", config2, config1))
+  for _, k in ipairs(km_only2) do print(k) end
+  print()
+end
+
+main()
