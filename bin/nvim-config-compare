@@ -10,7 +10,66 @@ local function dump_config(nvim_appname, output_file)
   local handle = io.popen(cmd)
   local output = handle:read("*a")
   handle:close()
+  print("Dumped config for " .. nvim_appname .. " to " .. output_file)
   return output
+end
+
+local function produce_diff(out_1, out2, diff_path)
+  local diff_cmd = string.format("json-diff %s %s > %s", out1, out2, diff_path)
+  os.execute(diff_cmd)
+  print("Diff saved to " .. diff_path)
+
+  print("====================================================================")
+  local cfg1, cfg2 = read_json(out1), read_json(out2)
+  local plugins1, plugins2 = cfg1.plugins or {}, cfg2.plugins or {}
+  local set1, set2 = set_keys(plugins1), set_keys(plugins2)
+  local only1, only2, both = list_diff(set1, set2)
+
+  print(string.format("Plugins present in %s but not %s:", config1, config2))
+  for _, name in ipairs(only1) do print("  " .. name) end
+  print()
+
+  print(string.format("Plugins present in %s but not %s:", config2, config1))
+  for _, name in ipairs(only2) do print("  " .. name) end
+  print()
+
+  local plugins_with_diffs = {}
+  local plugins_with_no_diffs = {}
+  for _, name in ipairs(both) do
+    local diff = plugin_diff_jsondiff(cfg1, cfg2, name)
+    if diff ~= "" then
+      plugins_with_diffs[name] = diff
+    else
+      plugins_with_no_diffs[name] = true
+    end
+  end
+
+  print("Plugins present in both with differences in configuration (excluding dir value):")
+  for plugin, diff in pairs(plugins_with_diffs) do
+    print(plugin .. " " .. RED .. "in " .. config1 .. RESET .. "  " .. GREEN .. "in " .. config2 .. RESET)
+    print(diff)
+    print()
+  end
+  print("Plugins present in both with no differences in configuration:")
+  for plugin, _ in pairs(plugins_with_no_diffs) do
+    print("  " .. plugin)
+  end
+  print()
+
+  local kmset1 = keymap_sets(cfg1.keymaps)
+  local kmset2 = keymap_sets(cfg2.keymaps)
+  local km_only1, km_only2 = {}, {}
+  for k in pairs(kmset1) do if not kmset2[k] then table.insert(km_only1, k) end end
+  for k in pairs(kmset2) do if not kmset1[k] then table.insert(km_only2, k) end end
+
+  print(string.format("Keymaps present in %s but not %s:", config1, config2))
+  for _, k in ipairs(km_only1) do print(k) end
+  print()
+
+  print(string.format("Keymaps present in %s but not %s:", config2, config1))
+  for _, k in ipairs(km_only2) do print(k) end
+  print()
+
 end
 
 local function write_file(path, content)
@@ -158,64 +217,10 @@ local function main()
 
   local out2 = output_dir .. "/" .. config2 .. ".json"
   local dump2 = dump_config(config2, out2)
-  -- Use system diff
+
   local diff_path = output_dir .. "/diff.txt"
-  local diff_cmd = string.format("json-diff %s %s > %s", out1, out2, diff_path)
-  os.execute(diff_cmd)
-  print("Dumped config to " .. out1)
-  print("Dumped config to " .. out2)
-  print("Diff saved to " .. diff_path)
+  produce_diff(out1, out2, diff_path)
 
-  print("====================================================================")
-  local cfg1, cfg2 = read_json(out1), read_json(out2)
-  local plugins1, plugins2 = cfg1.plugins or {}, cfg2.plugins or {}
-  local set1, set2 = set_keys(plugins1), set_keys(plugins2)
-  local only1, only2, both = list_diff(set1, set2)
-
-  print(string.format("Plugins present in %s but not %s:", config1, config2))
-  for _, name in ipairs(only1) do print("  " .. name) end
-  print()
-
-  print(string.format("Plugins present in %s but not %s:", config2, config1))
-  for _, name in ipairs(only2) do print("  " .. name) end
-  print()
-
-  local plugins_with_diffs = {}
-  local plugins_with_no_diffs = {}
-  for _, name in ipairs(both) do
-    local diff = plugin_diff_jsondiff(cfg1, cfg2, name)
-    if diff ~= "" then
-      plugins_with_diffs[name] = diff
-    else
-      plugins_with_no_diffs[name] = true
-    end
-  end
-
-  print("Plugins present in both with differences in configuration (excluding dir value):")
-  for plugin, diff in pairs(plugins_with_diffs) do
-    print(plugin .. " " .. RED .. "in " .. config1 .. RESET .. "  " .. GREEN .. "in " .. config2 .. RESET)
-    print(diff)
-    print()
-  end
-  print("Plugins present in both with no differences in configuration:")
-  for plugin, _ in pairs(plugins_with_no_diffs) do
-    print("  " .. plugin)
-  end
-  print()
-
-  local kmset1 = keymap_sets(cfg1.keymaps)
-  local kmset2 = keymap_sets(cfg2.keymaps)
-  local km_only1, km_only2 = {}, {}
-  for k in pairs(kmset1) do if not kmset2[k] then table.insert(km_only1, k) end end
-  for k in pairs(kmset2) do if not kmset1[k] then table.insert(km_only2, k) end end
-
-  print(string.format("Keymaps present in %s but not %s:", config1, config2))
-  for _, k in ipairs(km_only1) do print(k) end
-  print()
-
-  print(string.format("Keymaps present in %s but not %s:", config2, config1))
-  for _, k in ipairs(km_only2) do print(k) end
-  print()
 end
 
 main()
