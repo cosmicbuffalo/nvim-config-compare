@@ -43,7 +43,7 @@ local function is_valid_utf8(str)
   return true
 end
 
-local function sanitize(val, visited)
+function M.sanitize(val, visited)
   visited = visited or {}
   local t = type(val)
   if t == "string" then

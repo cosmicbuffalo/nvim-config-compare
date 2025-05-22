@@ -14,7 +14,7 @@ local function dump_config(nvim_appname, output_file)
   return output
 end
 
-local function produce_diff(out_1, out2, diff_path)
+local function produce_diff(out1, out2, diff_path)
   local diff_cmd = string.format("json-diff %s %s > %s", out1, out2, diff_path)
   os.execute(diff_cmd)
   print("Diff saved to " .. diff_path)
@@ -208,15 +208,15 @@ local function main()
 
   os.execute("mkdir -p " .. output_dir)
   local out1 = output_dir .. "/" .. config1 .. ".json"
-  local dump1 = dump_config(config1, out1)
-
+  dump_config(config1, out1)
 
   if not config2 then
+    print("Only dumped config for " .. config1)
     os.exit(0)
   end
 
   local out2 = output_dir .. "/" .. config2 .. ".json"
-  local dump2 = dump_config(config2, out2)
+  dump_config(config2, out2)
 
   local diff_path = output_dir .. "/diff.txt"
   produce_diff(out1, out2, diff_path)
