@@ -68,3 +68,27 @@ The tool generates:
 - Lua 5.1+ and [dkjson](https://github.com/LuaDist/dkjson)
 - Neovim with the lazy.nvim plugin manager
 
+## Development
+
+### Testing
+
+To run the tests:
+
+```bash
+# Install busted locally
+luarocks install --local busted
+
+# Run the tests
+~/.luarocks/bin/busted tests/
+```
+
+### Building
+
+```bash
+# Install locally for development
+luarocks make --local
+
+# Install globally
+sudo luarocks make
+```
+

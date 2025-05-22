@@ -14,9 +14,7 @@ description = {
 dependencies = {
   "lua >= 5.1",
   "dkjson"
-}
-test_dependencies = {
-  "busted >= 1.0"
+  -- Note: For testing, manually install: luarocks install --local busted
 }
 build = {
   type = "builtin",
