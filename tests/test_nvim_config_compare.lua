@@ -1,10 +1,24 @@
 local lu = require("luaunit")
 -- Try different ways to require the module
 local nvim_config_compare
-local success = pcall(function() nvim_config_compare = require("nvim_config_compare") end)
+
+-- Try multiple paths to find the module
+local paths_to_try = {
+  "nvim_config_compare",
+  "lua.nvim_config_compare",
+  "./lua/nvim_config_compare"
+}
+
+local success = false
+for _, path in ipairs(paths_to_try) do
+  success = pcall(function() 
+    nvim_config_compare = require(path)
+  end)
+  if success then break end
+end
+
 if not success then
-  -- Try with the lua/ prefix
-  nvim_config_compare = require("lua.nvim_config_compare")
+  error("Could not load nvim_config_compare module. Make sure it's in your LUA_PATH.")
 end
 
 TestNvimConfigCompare = {}

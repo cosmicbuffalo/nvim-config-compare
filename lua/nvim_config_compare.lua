@@ -264,7 +264,7 @@ function M.dump(path)
     if ok then
       local sanitized_mode_maps = {}
       for i, map in ipairs(res) do
-        sanitized_mode_maps[i] = sanitize(map)
+        sanitized_mode_maps[i] = M.sanitize(map)
       end
       keymaps[mode] = sanitized_mode_maps
     else
