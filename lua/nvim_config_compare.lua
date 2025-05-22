@@ -163,7 +163,7 @@ local function deep_resolve_placeholders(val, table_objs)
         if m then
           m = tonumber(m)
           if table_objs[m] == nil and table_objs.__bodies[m] then
-            local chunk, err = load("return " .. table_objs.__bodies[m], "viminspect_table_body", "t", {})
+            local chunk, err = loadstring("return " .. table_objs.__bodies[m])
             assert(chunk, "Parse error in named table " .. m .. ": " .. err)
             local ok, tval = pcall(chunk)
             assert(ok, "Eval error in named table " .. m .. ": " .. tval)
@@ -194,7 +194,7 @@ local function deep_resolve_placeholders(val, table_objs)
         if m then
           m = tonumber(m)
           if table_objs[m] == nil and table_objs.__bodies[m] then
-            local chunk, err = load("return " .. table_objs.__bodies[m], "viminspect_table_body", "t", {})
+            local chunk, err = loadstring("return " .. table_objs.__bodies[m])
             assert(chunk, "Parse error in named table " .. m .. ": " .. err)
             local ok, tval = pcall(chunk)
             assert(ok, "Eval error in named table " .. m .. ": " .. tval)
@@ -222,7 +222,7 @@ function M.parse_viminspect_string(viminspect_str)
     local without_named, named_bodies = extract_named_tables(sanitized)
     -- Replace <table n> with placeholder
     without_named = replace_table_refs(without_named, named_bodies)
-    local chunk, err = load("return " .. without_named, "viminspect_table", "t", {})
+    local chunk, err = loadstring("return " .. without_named)
     if not chunk then error("Parse error: " .. err) end
     local ok, tbl = pcall(chunk)
     if not ok then error("Eval error: " .. tbl) end
@@ -230,7 +230,7 @@ function M.parse_viminspect_string(viminspect_str)
     local table_objs = { __bodies = named_bodies }
     for n, body in pairs(named_bodies) do
         -- Recursively parse each table body
-        local tchunk, terr = load("return " .. body, "viminspect_table_body", "t", {})
+        local tchunk, terr = loadstring("return " .. body)
         if tchunk then
             local tok, tval = pcall(tchunk)
             if tok then

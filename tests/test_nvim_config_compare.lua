@@ -1,5 +1,11 @@
 local lu = require("luaunit")
-local nvim_config_compare = require("nvim_config_compare")
+-- Try different ways to require the module
+local nvim_config_compare
+local success = pcall(function() nvim_config_compare = require("nvim_config_compare") end)
+if not success then
+  -- Try with the lua/ prefix
+  nvim_config_compare = require("lua.nvim_config_compare")
+end
 
 TestNvimConfigCompare = {}
 
