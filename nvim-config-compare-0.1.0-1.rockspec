@@ -15,9 +15,6 @@ dependencies = {
   "lua >= 5.1",
   "dkjson"
 }
-test_dependencies = {
-  "luaunit >= 3.4"
-}
 build = {
   type = "builtin",
   modules = {
