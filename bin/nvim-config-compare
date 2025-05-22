@@ -2,47 +2,9 @@
 local json = require("dkjson")
 local nvim_config_compare = require("nvim_config_compare")
 
-local function is_valid_utf8(str)
-  if type(str) ~= "string" then return false end
-  local i, len = 1, #str
-  while i <= len do
-    local c = str:byte(i)
-    if c < 0x80 then
-      i = i + 1
-    elseif c >= 0xC2 and c <= 0xDF and i + 1 <= len then
-      local c2 = str:byte(i + 1)
-      if c2 < 0x80 or c2 > 0xBF then return false end
-      i = i + 2
-    elseif c == 0xE0 and i + 2 <= len then
-      local c2, c3 = str:byte(i + 1), str:byte(i + 2)
-      if c2 < 0xA0 or c2 > 0xBF or c3 < 0x80 or c3 > 0xBF then return false end
-      i = i + 3
-    elseif ((c >= 0xE1 and c <= 0xEC) or c == 0xEE or c == 0xEF) and i + 2 <= len then
-      local c2, c3 = str:byte(i + 1), str:byte(i + 2)
-      if c2 < 0x80 or c2 > 0xBF or c3 < 0x80 or c3 > 0xBF then return false end
-      i = i + 3
-    elseif c == 0xED and i + 2 <= len then
-      local c2, c3 = str:byte(i + 1), str:byte(i + 2)
-      if c2 < 0x80 or c2 > 0x9F or c3 < 0x80 or c3 > 0xBF then return false end
-      i = i + 3
-    elseif c == 0xF0 and i + 3 <= len then
-      local c2, c3, c4 = str:byte(i + 1), str:byte(i + 2), str:byte(i + 3)
-      if c2 < 0x90 or c2 > 0xBF or c3 < 0x80 or c3 > 0xBF or c4 < 0x80 or c4 > 0xBF then return false end
-      i = i + 4
-    elseif (c >= 0xF1 and c <= 0xF3) and i + 3 <= len then
-      local c2, c3, c4 = str:byte(i + 1), str:byte(i + 2), str:byte(i + 3)
-      if c2 < 0x80 or c2 > 0xBF or c3 < 0x80 or c3 > 0xBF or c4 < 0x80 or c4 > 0xBF then return false end
-      i = i + 4
-    elseif c == 0xF4 and i + 3 <= len then
-      local c2, c3, c4 = str:byte(i + 1), str:byte(i + 2), str:byte(i + 3)
-      if c2 < 0x80 or c2 > 0x8F or c3 < 0x80 or c3 > 0xBF or c4 < 0x80 or c4 > 0xBF then return false end
-      i = i + 4
-    else
-      return false
-    end
-  end
-  return true
-end
+local RED   = "\27[31m"
+local GREEN = "\27[32m"
+local RESET = "\27[0m"
 
 local function dump_config(nvim_appname, output_file)
   local cmd = string.format(
@@ -115,13 +77,6 @@ local function produce_diff(out1, out2, diff_path)
   for _, k in ipairs(km_only2) do print(k) end
   print()
 
-end
-
-local function write_file(path, content)
-  local f = io.open(path, "w")
-  assert(f, "Cannot open " .. path .. " for writing.")
-  f:write(content)
-  f:close()
 end
 
 local function parse_args(args)
@@ -235,9 +190,6 @@ local function keymap_sets(keymaps)
   return set
 end
 
-local RED   = "\27[31m"
-local GREEN = "\27[32m"
-local RESET = "\27[0m"
 
 local function main()
   local config1, config2, output_dir = parse_args(arg)
