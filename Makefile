@@ -4,7 +4,7 @@ install:
 	luarocks make
 
 test:
-	lua tests/test_nvim_config_compare.lua
+	busted tests/
 
 clean:
 	rm -rf output/
