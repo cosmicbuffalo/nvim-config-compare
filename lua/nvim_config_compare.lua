@@ -1,7 +1,7 @@
 local dkjson = require("dkjson")
 local M = {}
 
-local function is_valid_utf8(str)
+function M.is_valid_utf8(str)
   if type(str) ~= "string" then return false end
   local i, len = 1, #str
   while i <= len do
@@ -48,7 +48,7 @@ function M.sanitize(val, visited)
   visited = visited or {}
   local t = type(val)
   if t == "string" then
-    return is_valid_utf8(val) and val or "<invalid utf8 string>"
+    return M.is_valid_utf8(val) and val or "<invalid utf8 string>"
   elseif t == "number" or t == "boolean" or val == nil then
     return val
   elseif t == "table" then
@@ -70,7 +70,7 @@ function M.sanitize(val, visited)
       elseif type(v) == "table" then
         sanitized_v = M.sanitize(v, visited)
       elseif type(v) == "string" then
-        sanitized_v = is_valid_utf8(v) and v or "<invalid utf8 string>"
+        sanitized_v = M.is_valid_utf8(v) and v or "<invalid utf8 string>"
       else
         sanitized_v = v
       end

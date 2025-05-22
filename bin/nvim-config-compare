@@ -1,6 +1,8 @@
 #!/usr/bin/env lua
 local json = require("dkjson")
 local nvim_config_compare = require("nvim_config_compare")
+local sanitize = nvim_config_compare.sanitize
+local is_valid_utf8 = nvim_config_compare.is_valid_utf8
 
 local RED   = "\27[31m"
 local GREEN = "\27[32m"

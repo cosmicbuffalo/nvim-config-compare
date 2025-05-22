@@ -32,5 +32,17 @@ function TestNvimConfigCompare:test_sanitize()
   lu.assertEquals(sanitized.d.f, "<function>")
 end
 
+function TestNvimConfigCompare:test_is_valid_utf8()
+  lu.assertTrue(nvim_config_compare.is_valid_utf8("Hello world"))
+  lu.assertTrue(nvim_config_compare.is_valid_utf8("こんにちは"))
+  lu.assertTrue(nvim_config_compare.is_valid_utf8("🚀"))
+  
+  -- Create an invalid UTF-8 string
+  local invalid_utf8 = string.char(0xC0, 0xAF)
+  lu.assertFalse(nvim_config_compare.is_valid_utf8(invalid_utf8))
+end
+
 -- Run the tests
-os.exit(lu.LuaUnit.run())
+if not package.loaded['busted'] then
+  os.exit(lu.LuaUnit.run())
+end
