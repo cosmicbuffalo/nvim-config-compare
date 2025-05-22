@@ -1,34 +1,17 @@
 local lu = require("luaunit")
--- Try different ways to require the module
-local nvim_config_compare
-
--- Try multiple paths to find the module
-local paths_to_try = {
-  "nvim_config_compare",
-  "lua.nvim_config_compare",
-  "./lua/nvim_config_compare"
-}
-
-local success = false
-for _, path in ipairs(paths_to_try) do
-  success = pcall(function() 
-    nvim_config_compare = require(path)
-  end)
-  if success then break end
-end
-
-if not success then
-  error("Could not load nvim_config_compare module. Make sure it's in your LUA_PATH.")
-end
+local nvim_config_compare = require("nvim_config_compare")
 
 TestNvimConfigCompare = {}
 
 function TestNvimConfigCompare:test_parse_viminspect_string()
-  local test_str = [[<1>{a = 1, b = "test", c = <table 2>}]]
+  local test_str = [[{a = 1, b = "test", c = <2>{ d = 'd' }, e = <table 2> }]]
   local result = nvim_config_compare.parse_viminspect_string(test_str)
   lu.assertIsTable(result)
   lu.assertEquals(result.a, 1)
   lu.assertEquals(result.b, "test")
+  lu.assertIsTable(result.c)
+  lu.assertEquals(result.c.d, "d")
+  lu.assertEquals(result.e.d, "d")
 end
 
 function TestNvimConfigCompare:test_sanitize()
@@ -41,7 +24,7 @@ function TestNvimConfigCompare:test_sanitize()
       f = function() end
     }
   }
-  
+
   local sanitized = nvim_config_compare.sanitize(test_table)
   lu.assertIsTable(sanitized)
   lu.assertEquals(sanitized.a, 1)
@@ -56,7 +39,7 @@ function TestNvimConfigCompare:test_is_valid_utf8()
   lu.assertTrue(nvim_config_compare.is_valid_utf8("Hello world"))
   lu.assertTrue(nvim_config_compare.is_valid_utf8("こんにちは"))
   lu.assertTrue(nvim_config_compare.is_valid_utf8("🚀"))
-  
+
   -- Create an invalid UTF-8 string
   local invalid_utf8 = string.char(0xC0, 0xAF)
   lu.assertFalse(nvim_config_compare.is_valid_utf8(invalid_utf8))
