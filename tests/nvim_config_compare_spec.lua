@@ -1,52 +1,51 @@
+local lu = require("luaunit")
 local nvim_config_compare = require("nvim_config_compare")
 
-describe("nvim_config_compare", function()
-  describe("parse_viminspect_string", function()
-    it("should parse a viminspect string with table references", function()
-      local test_str = [[{a = 1, b = "test", c = <2>{ d = 'd' }, e = <table 2> }]]
-      local result = nvim_config_compare.parse_viminspect_string(test_str)
-      
-      assert.is_table(result)
-      assert.equal(1, result.a)
-      assert.equal("test", result.b)
-      assert.is_table(result.c)
-      assert.equal("d", result.c.d)
-      assert.equal("d", result.e.d)
-    end)
-  end)
+TestNvimConfigCompare = {}
 
-  describe("sanitize", function()
-    it("should sanitize a table with functions and nested tables", function()
-      local test_table = {
-        a = 1,
-        b = "test",
-        c = function() end,
-        d = {
-          e = "nested",
-          f = function() end
-        }
-      }
+function TestNvimConfigCompare:test_parse_viminspect_string()
+  local test_str = [[{a = 1, b = "test", c = <2>{ d = 'd' }, e = <table 2> }]]
+  local result = nvim_config_compare.parse_viminspect_string(test_str)
+  lu.assertIsTable(result)
+  lu.assertEquals(result.a, 1)
+  lu.assertEquals(result.b, "test")
+  lu.assertIsTable(result.c)
+  lu.assertEquals(result.c.d, "d")
+  lu.assertEquals(result.e.d, "d")
+end
 
-      local sanitized = nvim_config_compare.sanitize(test_table)
-      assert.is_table(sanitized)
-      assert.equal(1, sanitized.a)
-      assert.equal("test", sanitized.b)
-      assert.equal("<function>", sanitized.c)
-      assert.is_table(sanitized.d)
-      assert.equal("nested", sanitized.d.e)
-      assert.equal("<function>", sanitized.d.f)
-    end)
-  end)
+function TestNvimConfigCompare:test_sanitize()
+  local test_table = {
+    a = 1,
+    b = "test",
+    c = function() end,
+    d = {
+      e = "nested",
+      f = function() end
+    }
+  }
 
-  describe("is_valid_utf8", function()
-    it("should validate UTF-8 strings correctly", function()
-      assert.is_true(nvim_config_compare.is_valid_utf8("Hello world"))
-      assert.is_true(nvim_config_compare.is_valid_utf8("こんにちは"))
-      assert.is_true(nvim_config_compare.is_valid_utf8("🚀"))
-      
-      -- Create an invalid UTF-8 string
-      local invalid_utf8 = string.char(0xC0, 0xAF)
-      assert.is_false(nvim_config_compare.is_valid_utf8(invalid_utf8))
-    end)
-  end)
-end)
+  local sanitized = nvim_config_compare.sanitize(test_table)
+  lu.assertIsTable(sanitized)
+  lu.assertEquals(sanitized.a, 1)
+  lu.assertEquals(sanitized.b, "test")
+  lu.assertEquals(sanitized.c, "<function>")
+  lu.assertIsTable(sanitized.d)
+  lu.assertEquals(sanitized.d.e, "nested")
+  lu.assertEquals(sanitized.d.f, "<function>")
+end
+
+function TestNvimConfigCompare:test_is_valid_utf8()
+  lu.assertTrue(nvim_config_compare.is_valid_utf8("Hello world"))
+  lu.assertTrue(nvim_config_compare.is_valid_utf8("こんにちは"))
+  lu.assertTrue(nvim_config_compare.is_valid_utf8("🚀"))
+
+  -- Create an invalid UTF-8 string
+  local invalid_utf8 = string.char(0xC0, 0xAF)
+  lu.assertFalse(nvim_config_compare.is_valid_utf8(invalid_utf8))
+end
+
+-- Run the tests
+if not package.loaded['busted'] then
+  os.exit(lu.LuaUnit.run())
+end
