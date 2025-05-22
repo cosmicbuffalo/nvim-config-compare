@@ -43,7 +43,6 @@ function M.is_valid_utf8(str)
   return true
 end
 
-
 function M.sanitize(val, visited)
   visited = visited or {}
   local t = type(val)
@@ -83,7 +82,6 @@ function M.sanitize(val, visited)
     return "<" .. t .. ">"
   end
 end
-
 
 local function sanitize_functions_and_metatables(str)
     str = str:gsub("<function%s*%d+>", "[\"<function>\"]")
