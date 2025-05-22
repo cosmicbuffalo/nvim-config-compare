@@ -1,47 +1,6 @@
 local dkjson = require("dkjson")
 local M = {}
 
-local function is_valid_utf8(str)
-  if type(str) ~= "string" then return false end
-  local i, len = 1, #str
-  while i <= len do
-    local c = str:byte(i)
-    if c < 0x80 then
-      i = i + 1
-    elseif c >= 0xC2 and c <= 0xDF and i + 1 <= len then
-      local c2 = str:byte(i + 1)
-      if c2 < 0x80 or c2 > 0xBF then return false end
-      i = i + 2
-    elseif c == 0xE0 and i + 2 <= len then
-      local c2, c3 = str:byte(i + 1), str:byte(i + 2)
-      if c2 < 0xA0 or c2 > 0xBF or c3 < 0x80 or c3 > 0xBF then return false end
-      i = i + 3
-    elseif ((c >= 0xE1 and c <= 0xEC) or c == 0xEE or c == 0xEF) and i + 2 <= len then
-      local c2, c3 = str:byte(i + 1), str:byte(i + 2)
-      if c2 < 0x80 or c2 > 0xBF or c3 < 0x80 or c3 > 0xBF then return false end
-      i = i + 3
-    elseif c == 0xED and i + 2 <= len then
-      local c2, c3 = str:byte(i + 1), str:byte(i + 2)
-      if c2 < 0x80 or c2 > 0x9F or c3 < 0x80 or c3 > 0xBF then return false end
-      i = i + 3
-    elseif c == 0xF0 and i + 3 <= len then
-      local c2, c3, c4 = str:byte(i + 1), str:byte(i + 2), str:byte(i + 3)
-      if c2 < 0x90 or c2 > 0xBF or c3 < 0x80 or c3 > 0xBF or c4 < 0x80 or c4 > 0xBF then return false end
-      i = i + 4
-    elseif (c >= 0xF1 and c <= 0xF3) and i + 3 <= len then
-      local c2, c3, c4 = str:byte(i + 1), str:byte(i + 2), str:byte(i + 3)
-      if c2 < 0x80 or c2 > 0xBF or c3 < 0x80 or c3 > 0xBF or c4 < 0x80 or c4 > 0xBF then return false end
-      i = i + 4
-    elseif c == 0xF4 and i + 3 <= len then
-      local c2, c3, c4 = str:byte(i + 1), str:byte(i + 2), str:byte(i + 3)
-      if c2 < 0x80 or c2 > 0x8F or c3 < 0x80 or c3 > 0xBF or c4 < 0x80 or c4 > 0xBF then return false end
-      i = i + 4
-    else
-      return false
-    end
-  end
-  return true
-end
 
 function M.sanitize(val, visited)
   visited = visited or {}
@@ -67,7 +26,7 @@ function M.sanitize(val, visited)
       elseif type(v) == "thread" then
         sanitized_v = "<thread>"
       elseif type(v) == "table" then
-        sanitized_v = sanitize(v, visited)
+        sanitized_v = nvim_config_compare.sanitize(v, visited)
       elseif type(v) == "string" then
         sanitized_v = is_valid_utf8(v) and v or "<invalid utf8 string>"
       else

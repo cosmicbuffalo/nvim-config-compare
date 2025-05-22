@@ -1,5 +1,6 @@
 #!/usr/bin/env lua
 local json = require("dkjson")
+local nvim_config_compare = require("nvim_config_compare")
 
 local function dump_config(nvim_appname, output_file)
   local cmd = string.format(
@@ -23,6 +24,8 @@ local function produce_diff(out1, out2, diff_path)
   local cfg1, cfg2 = read_json(out1), read_json(out2)
   local plugins1, plugins2 = cfg1.plugins or {}, cfg2.plugins or {}
   local set1, set2 = set_keys(plugins1), set_keys(plugins2)
+  config1 = config1 or "config1"
+  config2 = config2 or "config2"
   local only1, only2, both = list_diff(set1, set2)
 
   print(string.format("Plugins present in %s but not %s:", config1, config2))
