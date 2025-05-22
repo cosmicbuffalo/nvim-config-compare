@@ -4,7 +4,7 @@ install:
 	luarocks make
 
 test:
-	busted tests/
+	~/.luarocks/bin/busted tests/
 
 clean:
 	rm -rf output/

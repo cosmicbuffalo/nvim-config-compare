@@ -16,7 +16,7 @@ dependencies = {
   "dkjson"
 }
 test_dependencies = {
-  "busted >= 2.0.0"
+  "busted >= 1.0"
 }
 build = {
   type = "builtin",
