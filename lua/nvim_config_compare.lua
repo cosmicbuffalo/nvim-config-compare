@@ -84,12 +84,12 @@ function M.sanitize(val, visited)
 end
 
 local function sanitize_functions_and_metatables(str)
-    str = str:gsub("<function%s*%d+>", "[\"<function>\"]")
-    str = str:gsub('%= %["<function>"%]', '= "<function>"')
-    str = str:gsub(', %["<function>"%]', ', "<function>"')
-    str = str:gsub('%{ %["<function>"%]', '{ "<function>"')
-    str = str:gsub("<metatable>", "[\"<metatable>\"]")
-    return str
+  str = str:gsub("<function%s*%d+>", "[\"<function>\"]")
+  str = str:gsub('%= %["<function>"%]', '= "<function>"')
+  str = str:gsub(', %["<function>"%]', ', "<function>"')
+  str = str:gsub('%{ %["<function>"%]', '{ "<function>"')
+  str = str:gsub("<metatable>", "[\"<metatable>\"]")
+  return str
 end
 
 -- Extract all <n>{ ... } "named tables" and record their string bodies
@@ -115,13 +115,13 @@ local function extract_named_tables(str, named_tables)
       end
     end
     if level ~= 0 then
-      error("Unmatched braces while extracting named table <"..n..">")
+      error("Unmatched braces while extracting named table <" .. n .. ">")
     end
     local body_end = i
     local tbl_body = str:sub(body_start, body_end)
     extract_named_tables(tbl_body, named_tables)
     named_tables[tonumber(n)] = tbl_body
-    result = result .. str:sub(last_end, s-1) .. '"__VIMINSPECT_TABLE_' .. n .. '__"'
+    result = result .. str:sub(last_end, s - 1) .. '"__VIMINSPECT_TABLE_' .. n .. '__"'
     last_end = body_end + 1
   end
 
@@ -135,7 +135,7 @@ local function replace_table_refs(str, named_tables)
     if named_tables[tonumber(n)] then
       return '"__VIMINSPECT_TABLE_' .. n .. '__"'
     else
-      return '<table ' .. n ..'>'
+      return '<table ' .. n .. '>'
     end
   end)
 end
@@ -216,35 +216,35 @@ local function deep_resolve_placeholders(val, table_objs)
 end
 
 function M.parse_viminspect_string(viminspect_str)
-    -- Remove <function ...> and <metatable>
-    local sanitized = sanitize_functions_and_metatables(viminspect_str)
-    -- Extract named tables, replace with placeholders
-    local without_named, named_bodies = extract_named_tables(sanitized)
-    -- Replace <table n> with placeholder
-    without_named = replace_table_refs(without_named, named_bodies)
-    local chunk, err = loadstring("return " .. without_named)
-    if not chunk then error("Parse error: " .. err) end
-    local ok, tbl = pcall(chunk)
-    if not ok then error("Eval error: " .. tbl) end
-    -- Parse all named table bodies into tables (with their own placeholders)
-    local table_objs = { __bodies = named_bodies }
-    for n, body in pairs(named_bodies) do
-        -- Recursively parse each table body
-        local tchunk, terr = loadstring("return " .. body)
-        if tchunk then
-            local tok, tval = pcall(tchunk)
-            if tok then
-                table_objs[n] = tval
-            else
-                table_objs[n] = {}
-            end
-        else
-            table_objs[n] = {}
-        end
+  -- Remove <function ...> and <metatable>
+  local sanitized = sanitize_functions_and_metatables(viminspect_str)
+  -- Extract named tables, replace with placeholders
+  local without_named, named_bodies = extract_named_tables(sanitized)
+  -- Replace <table n> with placeholder
+  without_named = replace_table_refs(without_named, named_bodies)
+  local chunk, err = loadstring("return " .. without_named)
+  if not chunk then error("Parse error: " .. err) end
+  local ok, tbl = pcall(chunk)
+  if not ok then error("Eval error: " .. tbl) end
+  -- Parse all named table bodies into tables (with their own placeholders)
+  local table_objs = { __bodies = named_bodies }
+  for n, body in pairs(named_bodies) do
+    -- Recursively parse each table body
+    local tchunk, terr = loadstring("return " .. body)
+    if tchunk then
+      local tok, tval = pcall(tchunk)
+      if tok then
+        table_objs[n] = tval
+      else
+        table_objs[n] = {}
+      end
+    else
+      table_objs[n] = {}
     end
-    -- Now resolve all table references recursively in main table and in all named tables
-    tbl = deep_resolve_placeholders(tbl, table_objs)
-    return tbl
+  end
+  -- Now resolve all table references recursively in main table and in all named tables
+  tbl = deep_resolve_placeholders(tbl, table_objs)
+  return tbl
 end
 
 function M.dump(path)
