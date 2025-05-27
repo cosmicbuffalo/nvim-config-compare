@@ -2,6 +2,8 @@
 
 A CLI and Lua toolkit for comparing Neovim configurations
 
+Disclaimer: This thing was 100% vibecoded, use at your own risk!
+
 ---
 
 ## Installation
